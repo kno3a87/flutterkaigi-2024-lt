@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const Example(title: 'Flutter Demo Home Page'),
+      home: const Example(title: 'Flutter Emoji Sample'),
     );
   }
 }

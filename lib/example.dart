@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutterkaigi_2024_lt/widgets/emoji.dart';
 
 class Example extends StatefulWidget {
   const Example({super.key, required this.title});
@@ -22,8 +23,17 @@ class _ExampleState extends State<Example> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: const Center(
-        child: Text('Hello, FlutterKaigi 2024 LT!'),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: RichText(
+            text: emojiScaledTextSpan(
+              text: 'Hello✌️FlutterKaigi🦆2024🔥LT👫',
+              style: const TextStyle(fontSize: 17),
+              originalFontSize: 17,
+            ),
+          ),
+        ),
       ),
     );
   }
