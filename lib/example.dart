@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:native_video_player/native_video_player.dart';
 
 class Example extends StatefulWidget {
   const Example({super.key, required this.title});
@@ -11,17 +11,22 @@ class Example extends StatefulWidget {
 }
 
 class _ExampleState extends State<Example> {
-  late VideoPlayerController _controller;
+  NativeVideoPlayerController? _nativeController;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(
-        'https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4'))
-      ..initialize().then((_) {
-        _controller.play();
-      })
-      ..setLooping(true);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _nativeController?.onPlaybackStatusChanged
+        .removeListener(_onPlaybackPositionChanged);
+    _nativeController?.onPlaybackPositionChanged
+        .removeListener(_onPlaybackPositionChanged);
+    _nativeController?.onPlaybackEnded.removeListener(() {});
+    _nativeController = null;
   }
 
   @override
@@ -36,21 +41,71 @@ class _ExampleState extends State<Example> {
           padding: const EdgeInsets.all(8.0),
           child: Stack(
             children: [
-              SizedBox(
-                height: 200,
-                child: VideoPlayer(_controller),
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: NativeVideoPlayerView(
+                  onViewReady: _initController,
+                ),
               ),
-              Positioned(
-                left: 0,
-                bottom: 0,
-                right: 0,
-                child:
-                    VideoProgressIndicator(_controller, allowScrubbing: true),
-              ),
+              if (_nativeController?.videoInfo case final videoInfo?)
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  child: Stack(
+                    fit: StackFit.passthrough,
+                    children: [
+                      LinearProgressIndicator(
+                        value: videoInfo.duration.toDouble(),
+                        valueColor: const AlwaysStoppedAnimation(
+                          Colors.transparent,
+                        ),
+                        backgroundColor: Colors.grey.withOpacity(0.5),
+                      ),
+                      LinearProgressIndicator(
+                        value:
+                            (_nativeController?.playbackInfo?.position ?? 0.0) /
+                                videoInfo.duration,
+                        valueColor: const AlwaysStoppedAnimation(Colors.red),
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _onPlaybackPositionChanged() {
+    setState(() {});
+  }
+
+  Future<void> _initController(NativeVideoPlayerController controller) async {
+    _nativeController = controller;
+
+    final videoSource = await _createVideoSource();
+    await _nativeController?.loadVideoSource(videoSource);
+
+    _nativeController?.play();
+
+    _nativeController?.onPlaybackStatusChanged
+        .addListener(_onPlaybackPositionChanged);
+    _nativeController?.onPlaybackPositionChanged
+        .addListener(_onPlaybackPositionChanged);
+
+    _nativeController?.onPlaybackEnded.addListener(() {
+      controller.play(); // loop
+    });
+  }
+
+  Future<VideoSource> _createVideoSource() async {
+    return VideoSource.init(
+      path:
+          'https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4',
+      type: VideoSourceType.network,
     );
   }
 }
