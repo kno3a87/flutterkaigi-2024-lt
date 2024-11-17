@@ -23,7 +23,10 @@ class _ExampleState extends State<Example> {
         title: Text(widget.title),
       ),
       body: const Center(
-        child: Text('Hello, FlutterKaigi 2024 LT!'),
+        child: Text(
+          'Hello, FlutterKaigi 2024 LT!',
+          style: TextStyle(fontSize: 24),
+        ),
       ),
     );
   }
