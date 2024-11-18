@@ -1,6 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutterkaigi_2024_lt/example.dart';
+import 'package:flutterkaigi_2024_lt/page1.dart';
+import 'package:flutterkaigi_2024_lt/page2.dart';
+import 'package:go_router/go_router.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+final routerConfig = GoRouter(
+  debugLogDiagnostics: true,
+  initialLocation: '/page1',
+  routes: [
+    ShellRoute(
+      navigatorKey: rootNavigatorKey,
+      builder: (_, __, child) {
+        return Example(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/page1',
+          pageBuilder: (_, __) => const MaterialPage(child: Page1()),
+        ),
+        GoRoute(
+          path: '/page2',
+          pageBuilder: (_, __) => const MaterialPage(child: Page2()),
+        ),
+      ],
+    ),
+  ],
+);
 void main() {
   runApp(const MyApp());
 }
@@ -10,12 +37,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const Example(title: 'Flutter Demo Home Page'),
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      routerConfig: routerConfig,
     );
   }
 }
