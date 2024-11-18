@@ -1,48 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class Example extends StatefulWidget {
-  final Widget child;
+  const Example({super.key, required this.title});
 
-  const Example({super.key, required this.child});
+  final String title;
 
   @override
   State<Example> createState() => _ExampleState();
 }
 
 class _ExampleState extends State<Example> {
-  int _selectedIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: widget.child,
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star),
-            label: 'Page 1',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Page 2',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: (value) {
-          setState(() {
-            _selectedIndex = value;
-          });
-
-          switch (value) {
-            case 0:
-              context.go('/page1');
-              break;
-            case 1:
-              context.go('/page2');
-              break;
-          }
-        },
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      body: const Center(
+        child: Text('Hello, FlutterKaigi 2024 LT!'),
       ),
     );
   }
