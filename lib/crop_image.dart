@@ -1,10 +1,10 @@
-import 'dart:typed_data';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutterkaigi_2024_lt/utils/image.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:screenshot/screenshot.dart';
+// import 'package:screenshot/screenshot.dart';
+import 'package:flutterkaigi_2024_lt/vendor/screenshot.dart';
+
 import 'dart:io';
 
 class CropImagePage extends StatelessWidget {
@@ -17,18 +17,12 @@ class CropImagePage extends StatelessWidget {
 
   Future<void> _captureAndCropScreenshot(BuildContext context) async {
     final screenshot = await screenshotController.capture();
-
-    if (screenshot case final ss?) {
-      if (!context.mounted) return;
-      final viewportSize = MediaQuery.of(context).size;
-      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      final croppedImage = await _cropCircleFromImage(
-        ss,
-        transformationController.value,
-        viewportSize,
-        pixelRatio,
-      );
-
+    if (screenshot case final ss) {
+      final croppedImage =
+          await _cropCircleFromImage(ss, transformationController.value);
+      if (croppedImage == null) {
+        return;
+      }
       await _saveImageToGallery(croppedImage);
 
       if (!context.mounted) return;
@@ -36,57 +30,22 @@ class CropImagePage extends StatelessWidget {
     }
   }
 
-  Future<File> _cropCircleFromImage(Uint8List screenshot, Matrix4 matrix,
-      Size viewportSize, double pixelRatio) async {
-    final codec = await instantiateImageCodec(screenshot);
-    final frame = await codec.getNextFrame();
-    final image = frame.image;
-
-    // スケールと平行移動を取得
-    final scale = matrix.getMaxScaleOnAxis();
-    final translation = matrix.getTranslation();
-
-    // クロップ領域のサイズ
-    const padding = 32.0;
-    final cropSize = (viewportSize.width - padding * 2) * pixelRatio;
-
-    // クロップ位置を計算
-    final dx = ((image.width / scale - cropSize) / 2 -
-                translation.x / scale * pixelRatio)
-            .round() -
-        32;
-    final dy = ((image.height / scale - cropSize) / 2 -
-                translation.y / scale * pixelRatio)
-            .round() -
-        32;
-
-    // 正方形クロップのサイズを計算
-    final size = cropSize.round();
-
-    final recorder = PictureRecorder();
-    final canvas =
-        Canvas(recorder, Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()));
-
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..filterQuality = FilterQuality.high;
-
-    // クロップ領域を描画
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(dx.toDouble(), dy.toDouble(), cropSize, cropSize),
-      Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
-      paint,
+  Future<File?> _cropCircleFromImage(
+      ScreenshotCaptureResult? screenshot, Matrix4 matrix) async {
+    if (screenshot == null) {
+      return null;
+    }
+    final bytes = await ImageUtils.cropRGBA(
+      screenshot.rgbaBytes,
+      screenshot.width,
+      screenshot.height,
+      Rect.fromLTWH(
+          0, 0, screenshot.width.toDouble(), screenshot.height.toDouble()),
     );
-
-    final picture = recorder.endRecording();
-    final img = await picture.toImage(size, size);
-    final byteData = await img.toByteData(format: ImageByteFormat.png);
-    final pngBytes = byteData!.buffer.asUint8List();
 
     final tempDir = Directory.systemTemp;
     final croppedFile =
-        await File('${tempDir.path}/cropped_image.png').writeAsBytes(pngBytes);
+        await File('${tempDir.path}/cropped_image.png').writeAsBytes(bytes!);
 
     return croppedFile;
   }
