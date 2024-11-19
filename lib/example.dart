@@ -43,7 +43,7 @@ class _ExampleState extends State<Example> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Screenshot Cropper'),
+        title: const Text('Native Cropper'),
       ),
       body: Center(
         child: Column(

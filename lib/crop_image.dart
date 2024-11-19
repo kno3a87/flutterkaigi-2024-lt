@@ -1,10 +1,9 @@
-import 'dart:typed_data';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutterkaigi_2024_lt/utils/image.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:screenshot/screenshot.dart';
+import 'package:flutterkaigi_2024_lt/vendor/screenshot.dart';
+
 import 'dart:io';
 
 class CropImagePage extends StatelessWidget {
@@ -16,18 +15,18 @@ class CropImagePage extends StatelessWidget {
   CropImagePage({super.key, required this.file});
 
   Future<void> _captureAndCropScreenshot(BuildContext context) async {
+    final screenSize = MediaQuery.sizeOf(context);
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
     final screenshot = await screenshotController.capture();
-
-    if (screenshot case final ss?) {
-      if (!context.mounted) return;
-      final viewportSize = MediaQuery.of(context).size;
-      final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    if (screenshot case final ss) {
       final croppedImage = await _cropFromImage(
         ss,
-        viewportSize,
+        screenSize,
         pixelRatio,
       );
-
+      if (croppedImage == null) {
+        return;
+      }
       await _saveImageToGallery(croppedImage);
 
       if (!context.mounted) return;
@@ -35,51 +34,41 @@ class CropImagePage extends StatelessWidget {
     }
   }
 
-  Future<File> _cropFromImage(
-      Uint8List screenshot, Size viewportSize, double pixelRatio) async {
-    final codec = await instantiateImageCodec(screenshot);
-    final frame = await codec.getNextFrame();
-    final image = frame.image;
+  Future<File?> _cropFromImage(ScreenshotCaptureResult? screenshot,
+      Size screenSize, double pixelRatio) async {
+    if (screenshot == null) {
+      return null;
+    }
+    debugPrint('screenshot: ${screenshot.width}x${screenshot.height}');
 
     // クロップ領域のサイズ
     const padding = 32.0;
-    final cropSize = (viewportSize.width - padding * 2) * pixelRatio;
+    final cropSize = (screenSize.width - padding * 2) * pixelRatio;
 
     // クロップ位置を計算
-    final halfScreenshotWidth = image.width / 2;
-    final halfScreenshotHeight = image.height / 2;
+    final halfScreenshotWidth = screenshot.width / 2;
+    final halfScreenshotHeight = screenshot.height / 2;
     final halfCropSize = cropSize / 2;
 
     final dx = halfScreenshotWidth - halfCropSize;
     final dy = halfScreenshotHeight - halfCropSize;
 
-    // 正方形クロップのサイズを計算
-    final size = cropSize.round();
+    debugPrint('dx: $dx, dy: $dy');
 
-    final recorder = PictureRecorder();
-    final canvas =
-        Canvas(recorder, Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()));
-
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..filterQuality = FilterQuality.high;
-
-    // クロップ領域を描画
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(dx.toDouble(), dy.toDouble(), cropSize, cropSize),
-      Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
-      paint,
+    final bytes = await ImageUtils.cropRGBA(
+      screenshot.rgbaBytes,
+      screenshot.width,
+      screenshot.height,
+      Rect.fromLTWH(dx, dy, cropSize, cropSize),
     );
 
-    final picture = recorder.endRecording();
-    final img = await picture.toImage(size, size);
-    final byteData = await img.toByteData(format: ImageByteFormat.png);
-    final pngBytes = byteData!.buffer.asUint8List();
+    if (bytes == null) {
+      return null;
+    }
 
     final tempDir = Directory.systemTemp;
     final croppedFile =
-        await File('${tempDir.path}/cropped_image.png').writeAsBytes(pngBytes);
+        await File('${tempDir.path}/cropped_image.png').writeAsBytes(bytes);
 
     return croppedFile;
   }
@@ -102,38 +91,38 @@ class CropImagePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Screenshot(
-              controller: screenshotController,
-              child: InteractiveViewer(
+      body: Screenshot(
+        controller: screenshotController,
+        child: Center(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              InteractiveViewer(
                 transformationController: transformationController,
                 clipBehavior: Clip.none,
                 child: Image.file(
                   File(file.path),
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                 ),
               ),
-            ),
-            Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: ClipPath(
-                  clipper: CropOverlayClipper(
-                    size: MediaQuery.of(context).size.width - 64.0,
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.black.withAlpha(124),
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: ClipPath(
+                    clipper: CropOverlayClipper(
+                      size: MediaQuery.of(context).size.width - 64.0,
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.black.withAlpha(124),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
