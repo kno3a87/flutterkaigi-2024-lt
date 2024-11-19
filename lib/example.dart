@@ -10,9 +10,20 @@ class Example extends StatefulWidget {
 }
 
 class _ExampleState extends State<Example> {
+  // スクロールバーだしたり無限スクロールするときとかに使う
+  final scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    scrollController.addListener(() {
+      if (scrollController.position.pixels ==
+          scrollController.position.maxScrollExtent) {
+        const snackbar = SnackBar(content: Text('Reached the end of the list'));
+        // スクロール末尾に到達したらスナックバーを表示
+        ScaffoldMessenger.of(context).showSnackBar(snackbar);
+      }
+    });
   }
 
   @override
@@ -22,8 +33,14 @@ class _ExampleState extends State<Example> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: const Center(
-        child: Text('Hello, FlutterKaigi 2024 LT!'),
+      body: ListView.builder(
+        controller: scrollController, // これを消せばステータスバータップでトップに戻れる
+        itemCount: 100,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text('Item $index'),
+          );
+        },
       ),
     );
   }
